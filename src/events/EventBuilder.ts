@@ -1,24 +1,18 @@
-import {WebhookAttachment, WebhookEntry, WebhookEvent, WebhookMessage, WebhookPostback} from './types'
+import {Builder} from '../utils'
+import {EventAttachment, EventEntry, MessageEvent, PostbackEvent, WebhookEvent} from './types'
 
-type EventData = {
+export type EventBuilderData = {
   senderId?: string
   recipientId?: string
   timestamp: number
-  items: Array<EventItem>
+  items: Array<MessageItem | PostbackItem>
 }
-type EventItem = EventMessageItem | EventPostbackItem
-type EventMessageItem = {timestamp: number; message: WebhookMessage}
-type EventPostbackItem = {timestamp: number; postback: WebhookPostback}
+type MessageItem = {timestamp: number; message: MessageEvent}
+type PostbackItem = {timestamp: number; postback: PostbackEvent}
 
-export function event(data?: EventData) {
-  return new Event(data || {timestamp: Date.now(), items: []})
-}
+let nextFakeMessageId = 1
 
-let nexttMessageId = 1
-
-class Event {
-  constructor(private data: EventData) {}
-
+export class EventBuilder extends Builder<WebhookEvent, EventBuilderData> {
   from(senderId: string) {
     return this.clone({senderId})
   }
@@ -31,9 +25,9 @@ class Event {
     return this.clone({timestamp})
   }
 
-  postback(title: string, payload: string) {
-    const mid = `m-${nexttMessageId++}`
-    const item = {timestamp: this.data.timestamp, postback: {mid, title, payload}}
+  postback(title: string, payload?: string) {
+    const mid = `m-${nextFakeMessageId++}`
+    const item = {timestamp: this.data.timestamp, postback: {mid, title, payload: payload || title}}
     return this.clone({items: [...this.data.items, item]})
   }
 
@@ -69,12 +63,16 @@ class Event {
     return this.attachment({type: 'location', payload: {url, coordinates: {lat, long}}})
   }
 
-  get(): WebhookEvent {
+  protected validate() {
     const {recipientId, senderId, items} = this.data
-    if (recipientId === undefined) throw `The recipient is missing, use .to(recipientId) to set the recipient`
+    if (recipientId === undefined)
+      throw `The recipient is missing, use .to(recipientId) to set the recipient`
     if (senderId === undefined) throw `The sender is missing, use .from(senderId) to set the sender`
     if (items.length === 0) throw `The message to send with the event is missing`
+  }
 
+  protected build() {
+    const {recipientId, senderId, items} = this.data
     const entry = items.map(({timestamp, ...data}) => {
       return {
         id: recipientId,
@@ -87,22 +85,18 @@ class Event {
             ...data,
           },
         ],
-      } as WebhookEntry
+      } as EventEntry
     })
-    return {object: 'page', entry}
+    return {object: 'page', entry} as WebhookEvent
   }
 
-  private message(data: Omit<WebhookMessage, 'mid'>) {
-    const mid = `m-${nexttMessageId++}`
+  private message(data: Omit<MessageEvent, 'mid'>) {
+    const mid = `m-${nextFakeMessageId++}`
     const item = {timestamp: this.data.timestamp, message: {mid, ...data}}
     return this.clone({items: [...this.data.items, item]})
   }
 
-  private attachment(data: WebhookAttachment) {
+  private attachment(data: EventAttachment) {
     return this.message({attachments: [data]})
-  }
-
-  private clone(data: Partial<EventData>) {
-    return event({...this.data, ...data})
   }
 }

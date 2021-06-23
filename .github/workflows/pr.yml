@@ -14,8 +14,7 @@ jobs:
         with:
           path: ./node_modules
           key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/yarn.lock') }}
-      - run: yarn install
-      - run: yarn build
+      - run: yarn
       - run: yarn test-coverage
       - uses: coverallsapp/github-action@master
         with:
