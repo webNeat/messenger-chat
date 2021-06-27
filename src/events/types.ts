@@ -9,13 +9,13 @@ export type EventEntry = {
   messaging: [MessagingItem]
 }
 
-export type MessagingItem = PostbackOrMessageEvent & {
+export type MessagingItem = {
   sender: {id: string}
   recipient: {id: string}
   timestamp: number
+  message?: MessageEvent
+  postback?: PostbackEvent
 }
-
-type PostbackOrMessageEvent = {postback: PostbackEvent} | {message: MessageEvent}
 
 export type PostbackEvent = {
   mid: string

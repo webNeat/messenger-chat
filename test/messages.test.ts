@@ -1,22 +1,12 @@
-import {message} from '../src'
+import {emailReply, phoneReply, text, textReply} from '../src'
 
 describe('messages', () => {
   test(`text message`, () => {
-    expect(message.text('Yo').get()).toEqual({
-      text: 'Yo',
-    })
+    expect(text('Yo')).toEqual({text: 'Yo'})
   })
 
   test(`text message with quick replies`, () => {
-    expect(
-      message
-        .text('Yo')
-        .withEmailQuickReply()
-        .withPhoneQuickReply()
-        .withQuickReply('foo')
-        .withQuickReply('bar')
-        .get()
-    ).toEqual({
+    expect(text('Yo', [emailReply(), phoneReply(), textReply('foo'), textReply('bar')])).toEqual({
       text: 'Yo',
       quick_replies: [
         {
