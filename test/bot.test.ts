@@ -1,5 +1,6 @@
 import {BotConfig, ChatEntry} from '../src/types'
 import {bot, event, text, textReply} from '../src'
+import {AxiosInstance} from 'axios'
 
 describe('bot', () => {
   const evt = event()
@@ -14,17 +15,18 @@ describe('bot', () => {
     })
 
   test(`simple echo bot`, async () => {
-    const send = jest.fn()
+    const axiosMock = ({post: jest.fn()} as any) as AxiosInstance
+    const sendUrl = `https://graph.facebook.com/v11.0/me/messages?access_token=fake-access-token`
     const handle = ({message}: ChatEntry) => {
       if (message) {
         return text(`You said: "${message.text}"`)
       }
       return text(`Send me a message and I will send it back to you!`)
     }
-    const app = makeBot({send, handle})
+    const app = makeBot({axiosInstance: axiosMock, handle})
 
     await app.handle(getStarted)
-    expect(send).toBeCalledWith('fake-access-token', {
+    expect(axiosMock.post).toBeCalledWith(sendUrl, {
       messaging_type: 'RESPONSE',
       recipient: {id: 'bob'},
       message: {
@@ -34,7 +36,7 @@ describe('bot', () => {
     })
 
     await app.handle(evt.text('Yo').get())
-    expect(send).toBeCalledWith('fake-access-token', {
+    expect(axiosMock.post).toBeCalledWith(sendUrl, {
       messaging_type: 'RESPONSE',
       recipient: {id: 'bob'},
       message: {text: 'You said: "Yo"', quick_replies: undefined},
@@ -42,7 +44,8 @@ describe('bot', () => {
   })
 
   test(`calculator bot`, async () => {
-    const send = jest.fn()
+    const axiosMock = ({post: jest.fn()} as any) as AxiosInstance
+    const sendUrl = `https://graph.facebook.com/v11.0/me/messages?access_token=fake-access-token`
     const initialContext = {step: 'start'}
     const handle = async ({context, setContext, message}: ChatEntry) => {
       if (context.step === 'start') {
@@ -81,10 +84,10 @@ describe('bot', () => {
       }
       return undefined
     }
-    const app = makeBot({send, handle, initialContext})
+    const app = makeBot({axiosInstance: axiosMock, handle, initialContext})
 
     await app.handle(getStarted)
-    expect(send).toBeCalledWith('fake-access-token', {
+    expect(axiosMock.post).toBeCalledWith(sendUrl, {
       messaging_type: 'RESPONSE',
       recipient: {id: 'bob'},
       message: {
@@ -99,35 +102,35 @@ describe('bot', () => {
     })
 
     await app.handle(evt.quickReply('+').get())
-    expect(send).toBeCalledWith('fake-access-token', {
+    expect(axiosMock.post).toBeCalledWith(sendUrl, {
       messaging_type: 'RESPONSE',
       recipient: {id: 'bob'},
       message: {text: `Please enter the first argument for operation '+'`},
     })
 
     await app.handle(evt.text('bla bla').get())
-    expect(send).toBeCalledWith('fake-access-token', {
+    expect(axiosMock.post).toBeCalledWith(sendUrl, {
       messaging_type: 'RESPONSE',
       recipient: {id: 'bob'},
       message: {text: `Your input is incorrect, try again`},
     })
 
     await app.handle(evt.text('11').get())
-    expect(send).toBeCalledWith('fake-access-token', {
+    expect(axiosMock.post).toBeCalledWith(sendUrl, {
       messaging_type: 'RESPONSE',
       recipient: {id: 'bob'},
       message: {text: `Please enter the second argument for operation '+'`},
     })
 
     await app.handle(evt.text('4').get())
-    expect(send).toBeCalledWith('fake-access-token', {
+    expect(axiosMock.post).toBeCalledWith(sendUrl, {
       messaging_type: 'RESPONSE',
       recipient: {id: 'bob'},
       message: {text: `The result is 15`},
     })
 
     await app.handle(evt.text('Thanks!').get())
-    expect(send).toBeCalledWith('fake-access-token', {
+    expect(axiosMock.post).toBeCalledWith(sendUrl, {
       messaging_type: 'RESPONSE',
       recipient: {id: 'bob'},
       message: {
