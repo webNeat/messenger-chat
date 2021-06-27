@@ -35,8 +35,8 @@ export class EventBuilder extends Builder<WebhookEvent, EventBuilderData> {
     return this.message({text: content})
   }
 
-  quickReply(text: string, payload: string) {
-    return this.message({text, quick_reply: {payload}})
+  quickReply(text: string, payload?: string) {
+    return this.message({text, quick_reply: {payload: payload || text}})
   }
 
   replyTo(id: string, text: string) {

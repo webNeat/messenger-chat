@@ -1,110 +1,87 @@
-import {bot, event, message} from '../src'
-import {Bot} from '../src/types'
+import {BotConfig, ChatEntry} from '../src/types'
+import {bot, event, text, textReply} from '../src'
 
 describe('bot', () => {
   const evt = event()
     .from('bob')
     .to('page')
   const getStarted = evt.postback('Get started', 'get_started').get()
-  let app: Bot
-  let send: any
-  beforeEach(() => {
-    send = jest.fn()
-    app = bot({accessToken: 'fake-access-token', verifyToken: 'fake-verify-token', send})
-  })
+  const makeBot = (config: Partial<BotConfig>) =>
+    bot({
+      accessToken: 'fake-access-token',
+      verifyToken: 'fake-verify-token',
+      ...config,
+    })
 
   test(`simple echo bot`, async () => {
-    app.on('start', {
-      send: async () => message.text('Tell me something and I will send it back to you!'),
-      listen: async ({message, setContext}) => {
-        await setContext({text: message!.text})
-        return 'echo'
-      },
-    })
-
-    app.on('echo', {
-      send: async ({text}) => message.text(text),
-      listen: async ({message, setContext}) => {
-        await setContext({text: message!.text})
-      },
-    })
+    const send = jest.fn()
+    const handle = ({message}: ChatEntry) => {
+      if (message) {
+        return text(`You said: "${message.text}"`)
+      }
+      return text(`Send me a message and I will send it back to you!`)
+    }
+    const app = makeBot({send, handle})
 
     await app.handle(getStarted)
     expect(send).toBeCalledWith('fake-access-token', {
       messaging_type: 'RESPONSE',
       recipient: {id: 'bob'},
-      message: {text: 'Tell me something and I will send it back to you!'},
+      message: {
+        text: 'Send me a message and I will send it back to you!',
+        quick_replies: undefined,
+      },
     })
 
     await app.handle(evt.text('Yo').get())
     expect(send).toBeCalledWith('fake-access-token', {
       messaging_type: 'RESPONSE',
       recipient: {id: 'bob'},
-      message: {text: 'Yo'},
+      message: {text: 'You said: "Yo"', quick_replies: undefined},
     })
   })
 
   test(`calculator bot`, async () => {
-    app.on('start', {
-      send: async () =>
-        message
-          .text('Select an operation')
-          .withQuickReply('+')
-          .withQuickReply('-')
-          .withQuickReply('*')
-          .withQuickReply('/'),
-      listen: async ({postback, setContext}) => {
-        if (postback) {
-          await setContext({operation: postback.payload})
-          return 'args'
-        }
-        return 'start'
-      },
-    })
+    const send = jest.fn()
+    const initialContext = {step: 'start'}
+    const handle = async ({context, setContext, message}: ChatEntry) => {
+      if (context.step === 'start') {
+        await setContext({step: 'operation'})
+        return text(`Select an operation`, [
+          textReply('+'),
+          textReply('-'),
+          textReply('*'),
+          textReply('/'),
+        ])
+      }
 
-    app.on('args', {
-      send: async ({error, operation, a}) => {
-        if (error) {
-          return message.text(`Your input is incorrect, try again`)
-        }
-        return message.text(
-          `Please enter the ${
-            a === undefined ? 'first' : 'second'
-          } argument for operation '${operation}'`
-        )
-      },
-      listen: async ({message, context, setContext}) => {
-        if (message) {
-          const x = parseFloat(message.text!)
-          if (isNaN(x) || (context.operation == '/' && context.a !== undefined && x == 0)) {
-            context = {...context, error: true}
-          } else if (context.a === undefined) {
-            context = {...context, error: false, a: x}
-          } else {
-            context = {...context, error: false, b: x}
-          }
-          await setContext(context)
-          if (context.a !== undefined && context.b !== undefined) {
-            return 'result'
-          }
-        }
-        return 'args'
-      },
-    })
+      if (context.step === 'operation' && message?.quick_reply?.payload) {
+        const operation = message?.quick_reply?.payload
+        await setContext({operation, args: [], step: 'args'})
+        return text(`Please enter the first argument for operation '${operation}'`)
+      }
 
-    app.on('result', {
-      send: async ({operation, a, b}) => {
-        let result = a + b
-        if (operation == '-') result = a - b
-        if (operation == '*') result = a * b
-        if (operation == '/') result = a / b
-        return message.text(`The result is ${result}`)
-      },
-      listen: async ({setContext}) => {
-        setContext({})
-        return 'start'
-      },
-    })
+      const {operation, args} = context
+      if (context.step === 'args' && message?.text) {
+        const value = parseFloat(message.text)
+        if (isNaN(value) || (operation === '/' && value === 0))
+          return text(`Your input is incorrect, try again`)
+        if (args.length == 0) {
+          setContext({...context, args: [value]})
+          return text(`Please enter the second argument for operation '${context.operation}'`)
+        }
+        if (args.length == 1) {
+          let result = args[0] + value
+          if (operation == '-') result = args[0] - value
+          if (operation == '*') result = args[0] * value
+          if (operation == '/') result = args[0] / value
+          setContext({step: 'start'})
+          return text(`The result is ${result}`)
+        }
+      }
+      return undefined
+    }
+    const app = makeBot({send, handle, initialContext})
 
     await app.handle(getStarted)
     expect(send).toBeCalledWith('fake-access-token', {
@@ -121,7 +98,7 @@ describe('bot', () => {
       },
     })
 
-    await app.handle(evt.postback('+').get())
+    await app.handle(evt.quickReply('+').get())
     expect(send).toBeCalledWith('fake-access-token', {
       messaging_type: 'RESPONSE',
       recipient: {id: 'bob'},
