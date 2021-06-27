@@ -1,3 +1,4 @@
+import {AxiosInstance} from 'axios'
 import {Message} from '../messages/types'
 import {ContextStorage} from '../storages/types'
 import {WebhookEvent, MessagingItem} from '../events/types'
@@ -8,7 +9,7 @@ export type BotConfig = {
   initialContext: any
   storage: ContextStorage
   handle: (entry: ChatEntry) => Message | undefined | Promise<Message | undefined>
-  send: (accessToken: string, data: any) => Promise<any>
+  axiosInstance: AxiosInstance
 }
 
 export interface Bot {
@@ -25,4 +26,12 @@ export type VerificationQuery = {
 export type ChatEntry = MessagingItem & {
   context: any
   setContext: (value: Record<string, any>) => void
+  getUserFields: () => Promise<UserFields>
+}
+
+export type UserFields = {
+  id: string
+  first_name: string
+  last_name: string
+  profile_pic: string
 }

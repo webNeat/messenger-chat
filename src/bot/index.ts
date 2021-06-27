@@ -14,11 +14,7 @@ export function bot(config: Partial<BotConfig>): Bot {
   config = {
     initialContext: {},
     storage: memoryStorage(),
-    send: (token, data) =>
-      axiosInstance.post(
-        `https://graph.facebook.com/v11.0/me/messages?access_token=${token}`,
-        data
-      ),
+    axiosInstance,
     ...config,
   }
 
