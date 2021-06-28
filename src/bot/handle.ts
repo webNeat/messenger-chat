@@ -17,16 +17,23 @@ async function handleEntry(config: BotConfig, entry: EventEntry) {
   const context = (await storage.get(contextKey)) || initialContext
   const setContext = (value: any) => storage.set(contextKey, value)
   const getUserFields = () => loadUserFields(config, sender)
-  let response = config.handle({...messaging, context, setContext, getUserFields})
-  if (response instanceof Promise) {
-    response = await response
+  let responses = config.handle({...messaging, context, setContext, getUserFields})
+  if (responses instanceof Promise) {
+    responses = await responses
   }
-  if (response) {
-    await sendReply(config, {
-      messaging_type: 'RESPONSE',
-      recipient: sender,
-      message: response,
-    })
+  if (responses && !Array.isArray(responses)) {
+    responses = [responses]
+  }
+  if (responses) {
+    await Promise.all(
+      responses.map(response =>
+        sendReply(config, {
+          messaging_type: 'RESPONSE',
+          recipient: sender,
+          message: response,
+        })
+      )
+    )
   }
 }
 
