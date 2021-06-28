@@ -3,12 +3,14 @@ import {Message} from '../messages/types'
 import {ContextStorage} from '../storages/types'
 import {WebhookEvent, MessagingItem} from '../events/types'
 
+type OptionalOneOrMany<T> = T | T[] | undefined
+
 export type BotConfig = {
   accessToken: string
   verifyToken: string
   initialContext: any
   storage: ContextStorage
-  handle: (entry: ChatEntry) => Message | undefined | Promise<Message | undefined>
+  handle: (entry: ChatEntry) => OptionalOneOrMany<Message> | Promise<OptionalOneOrMany<Message>>
   axiosInstance: AxiosInstance
 }
 
