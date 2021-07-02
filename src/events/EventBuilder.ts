@@ -1,14 +1,22 @@
 import {Builder} from '../utils'
-import {EventAttachment, EventEntry, MessageEvent, PostbackEvent, WebhookEvent} from './types'
+import {
+  AccountLinkingEvent,
+  EventAttachment,
+  EventEntry,
+  MessageEvent,
+  PostbackEvent,
+  WebhookEvent,
+} from './types'
 
 export type EventBuilderData = {
   senderId?: string
   recipientId?: string
   timestamp: number
-  items: Array<MessageItem | PostbackItem>
+  items: Array<MessageItem | PostbackItem | AccountLinkingItem>
 }
 type MessageItem = {timestamp: number; message: MessageEvent}
 type PostbackItem = {timestamp: number; postback: PostbackEvent}
+type AccountLinkingItem = {timestamp: number; account_linking: AccountLinkingEvent}
 
 let nextFakeMessageId = 1
 
@@ -28,6 +36,14 @@ export class EventBuilder extends Builder<WebhookEvent, EventBuilderData> {
   postback(title: string, payload?: string) {
     const mid = `m-${nextFakeMessageId++}`
     const item = {timestamp: this.data.timestamp, postback: {mid, title, payload: payload || title}}
+    return this.clone({items: [...this.data.items, item]})
+  }
+
+  accountLinked(authorizationCode: string) {
+    const item: AccountLinkingItem = {
+      timestamp: this.data.timestamp,
+      account_linking: {status: 'linked', authorization_code: authorizationCode},
+    }
     return this.clone({items: [...this.data.items, item]})
   }
 
