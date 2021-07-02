@@ -15,7 +15,12 @@ export type MessagingItem = {
   timestamp: number
   message?: MessageEvent
   postback?: PostbackEvent
+  account_linking?: AccountLinkingEvent
 }
+
+export type AccountLinkingEvent =
+  | {status: 'linked'; authorization_code: string}
+  | {status: 'unlinked'}
 
 export type PostbackEvent = {
   mid: string
