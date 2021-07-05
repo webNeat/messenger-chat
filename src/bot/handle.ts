@@ -1,6 +1,5 @@
-import {EventEntry, WebhookEvent} from '../events/types'
-import {Reply} from '../messages/types'
-import {BotConfig} from './types'
+import {send} from './send'
+import {BotConfig, EventEntry, WebhookEvent} from '../types'
 
 export async function handle(config: BotConfig, event: WebhookEvent) {
   if (event.object !== 'page') {
@@ -17,7 +16,7 @@ async function handleEntry(config: BotConfig, entry: EventEntry) {
   const context = (await storage.get(contextKey)) || initialContext
   const setContext = (value: any) => storage.set(contextKey, value)
   const getUserFields = () => loadUserFields(config, sender)
-  let responses = config.handle({...messaging, context, setContext, getUserFields})
+  let responses = config.handle({...messaging, contextKey, context, setContext, getUserFields})
   if (responses instanceof Promise) {
     responses = await responses
   }
@@ -25,23 +24,8 @@ async function handleEntry(config: BotConfig, entry: EventEntry) {
     responses = [responses]
   }
   if (responses) {
-    await Promise.all(
-      responses.map(response =>
-        sendReply(config, {
-          messaging_type: 'RESPONSE',
-          recipient: sender,
-          message: response,
-        })
-      )
-    )
+    await Promise.all(responses.map(response => send(config, sender.id, response)))
   }
-}
-
-async function sendReply({axiosInstance, accessToken}: BotConfig, reply: Reply) {
-  return axiosInstance.post(
-    `https://graph.facebook.com/v11.0/me/messages?access_token=${accessToken}`,
-    reply
-  )
 }
 
 async function loadUserFields({axiosInstance, accessToken}: BotConfig, sender: {id: string}) {
