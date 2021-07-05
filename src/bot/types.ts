@@ -17,6 +17,7 @@ export type BotConfig = {
 export interface Bot {
   verify(query: VerificationQuery): string
   handle(event: WebhookEvent): Promise<void>
+  send(recipientId: string, message: Message): Promise<any>
 }
 
 export type VerificationQuery = {
@@ -26,6 +27,7 @@ export type VerificationQuery = {
 }
 
 export type ChatEntry = MessagingItem & {
+  contextKey: string
   context: any
   setContext: (value: Record<string, any>) => void
   getUserFields: () => Promise<UserFields>

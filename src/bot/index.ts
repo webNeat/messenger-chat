@@ -1,4 +1,5 @@
 import axios from 'axios'
+import {send} from './send'
 import {handle} from './handle'
 import {verify} from './verify'
 import {Bot, BotConfig} from './types'
@@ -21,5 +22,6 @@ export function bot(config: Partial<BotConfig>): Bot {
   return {
     verify: query => verify(config as BotConfig, query),
     handle: event => handle(config as BotConfig, event),
+    send: (id, message) => send(config as BotConfig, id, message),
   }
 }
